@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+
+# Credentials / Secrets
+client_secret*.json
+token.json
+ms_token_cache.json
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/settings.local.json
+
+# OS
+.DS_Store
