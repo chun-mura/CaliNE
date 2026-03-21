@@ -2,8 +2,10 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
 .env
 .env.*
+!.env.template
 
 # Credentials / Secrets
 client_secret*.json
