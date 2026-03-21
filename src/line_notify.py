@@ -5,21 +5,19 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-LINE_API_URL = "https://api.line.me/v2/bot/message/push"
+LINE_API_URL = "https://api.line.me/v2/bot/message/broadcast"
 JST = ZoneInfo("Asia/Tokyo")
 MAX_RETRIES = 3
 
 
-def _push_message(text: str) -> None:
+def _broadcast_message(text: str) -> None:
     token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
-    user_id = os.environ["LINE_USER_ID"]
 
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
     }
     body = {
-        "to": user_id,
         "messages": [{"type": "text", "text": text}],
     }
 
@@ -50,4 +48,4 @@ def send_daily_schedule(events: list[dict]) -> None:
         body = "\n".join(lines)
         text = f"{header}\n\n{body}\n\n全{len(events)}件"
 
-    _push_message(text)
+    _broadcast_message(text)

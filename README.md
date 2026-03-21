@@ -59,8 +59,7 @@ python3 scripts/setup_ms_auth.py --sync-env
 2. `LINE_CHANNEL_ACCESS_TOKEN` の取得:
    - [LINE Developers](https://developers.line.biz/) > 該当チャネル > **Messaging API設定** タブ
    - 「チャネルアクセストークン（長期）」の **発行** ボタンをクリック
-3. `LINE_USER_ID` の取得:
-   - 同チャネルの **チャネル基本設定** タブ > 「あなたのユーザーID」に表示される `U` から始まる文字列
+3. Bot を友だち追加したユーザー全員にメッセージが配信されます（Broadcast API）
 
 ### 4. GitHub Secrets
 
@@ -73,7 +72,6 @@ python3 scripts/setup_ms_auth.py --sync-env
 | `AZURE_CLIENT_SECRET` | Yes | Azure クライアントシークレット |
 | `MS_TOKEN_JSON` | Yes | `setup_ms_auth.py` の出力 JSON |
 | `LINE_CHANNEL_ACCESS_TOKEN` | Yes | LINE チャネルアクセストークン |
-| `LINE_USER_ID` | Yes | LINE ユーザー ID |
 | `GOOGLE_CREDENTIALS_JSON` | No | GCP OAuth クライアント JSON（Google連携時のみ） |
 | `GOOGLE_TOKEN_JSON` | No | Google 認証トークン JSON（Google連携時のみ） |
 

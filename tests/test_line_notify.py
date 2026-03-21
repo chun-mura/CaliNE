@@ -12,7 +12,6 @@ JST = ZoneInfo("Asia/Tokyo")
 
 ENV_VARS = {
     "LINE_CHANNEL_ACCESS_TOKEN": "fake-token",
-    "LINE_USER_ID": "fake-line-user",
 }
 
 
