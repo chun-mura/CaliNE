@@ -10,21 +10,31 @@ GitHub Actions で毎朝 JST 10:00 に自動実行。
 ### 1. Azure Portal（Microsoft 365）
 
 1. [Azure Portal](https://portal.azure.com/) > アプリの登録 > 新規登録
-2. リダイレクト URI: `https://login.microsoftonline.com/common/oauth2/nativeclient`
-3. API のアクセス許可 > Microsoft Graph > **委任されたアクセス許可** > `Calendars.Read` を追加
-4. 証明書とシークレット > クライアントシークレットを作成
-5. 以下をメモ:
+   - 「サポートされているアカウントの種類」は **「任意の組織ディレクトリ内のアカウントと個人の Microsoft アカウント」** を選択
+2. リダイレクト URI: プラットフォームは **「Web」** を選択し、`https://login.microsoftonline.com/common/oauth2/nativeclient` を設定
+3. 認証 > **「パブリック クライアント フローを許可する」** を **「はい」** に変更して保存
+4. API のアクセス許可 > Microsoft Graph > **委任されたアクセス許可** > `Calendars.Read` を追加
+5. 証明書とシークレット > クライアントシークレットを作成
+6. 以下を`.env` に設定:
    - `AZURE_TENANT_ID`（テナント ID）
    - `AZURE_CLIENT_ID`（アプリケーション ID）
    - `AZURE_CLIENT_SECRET`（クライアントシークレットの値）
+   - `AZURE_AUTHORITY`（認証サーバーの URL。個人 Microsoft アカウントを含む場合は `https://login.microsoftonline.com/common`、組織アカウントのみの場合は `https://login.microsoftonline.com/{テナントID}`）
+
+> **既存のアプリ登録を変更する場合:**
+> 「サポートされているアカウントの種類」を後から変更しようとすると `Property api.requestedAccessTokenVersion is invalid` エラーになることがあります。
+> その場合は **マニフェスト** を開き、先に `"accessTokenAcceptedVersion": null` を `2` に変更して保存してから、`"signInAudience"` を `"AzureADandPersonalMicrosoftAccount"` に変更してください。
 
 ### 2. 初回 Microsoft 認証
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-AZURE_TENANT_ID=xxx AZURE_CLIENT_ID=yyy AZURE_CLIENT_SECRET=zzz \
-  python scripts/setup_ms_auth.py
+source .env
+AZURE_TENANT_ID=$AZURE_TENANT_ID AZURE_CLIENT_ID=$AZURE_CLIENT_ID AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET \
+  python3 scripts/setup_ms_auth.py
 ```
 
 表示された URL にブラウザでアクセスし、コードを入力してサインイン。
@@ -35,12 +45,12 @@ AZURE_TENANT_ID=xxx AZURE_CLIENT_ID=yyy AZURE_CLIENT_SECRET=zzz \
 
 ### 3. LINE Messaging API
 
-1. [LINE Developers](https://developers.line.biz/) > プロバイダー作成 > チャネル作成（Messaging API）
-2. チャネルアクセストークン（長期）を発行
-3. 自分の LINE ユーザー ID を確認（チャネル基本設定 > あなたのユーザーID）
-4. 以下をメモ:
-   - `LINE_CHANNEL_ACCESS_TOKEN`
-   - `LINE_USER_ID`
+1. [LINE公式アカウントを作成](https://entry.line.biz/) し、LINE Official Account Manager で Messaging API を有効化
+2. `LINE_CHANNEL_ACCESS_TOKEN` の取得:
+   - [LINE Developers](https://developers.line.biz/) > 該当チャネル > **Messaging API設定** タブ
+   - 「チャネルアクセストークン（長期）」の **発行** ボタンをクリック
+3. `LINE_USER_ID` の取得:
+   - 同チャネルの **チャネル基本設定** タブ > 「あなたのユーザーID」に表示される `U` から始まる文字列
 
 ### 4. GitHub Secrets
 
@@ -68,16 +78,20 @@ gh workflow run "Daily Calendar Sync"
 ## ローカル実行
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 # 環境変数を .env に設定してから:
-python -m src.main
+python3 -m src.main
 ```
 
 ## テスト
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest tests/ -v
+python3 -m pytest tests/ -v
 ```
 
 ## Google カレンダー同期（オプション）
@@ -86,6 +100,7 @@ python -m pytest tests/ -v
 
 1. workflow の `ENABLE_GOOGLE_CALENDAR` を `"true"` に変更
 2. GCP で Google Calendar API を有効化し、OAuth クライアント ID を作成
+   - プラットフォームは **「Web」** を選択し、リダイレクト URI に `http://localhost` を設定
 3. 初回認証でリフレッシュトークンを取得:
 
 ```bash
