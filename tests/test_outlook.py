@@ -1,7 +1,6 @@
 """Outlook カレンダー取得モジュールのテスト."""
 
-import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 

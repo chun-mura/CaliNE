@@ -6,7 +6,6 @@
 """
 
 import asyncio
-import json
 import os
 import re
 import time  # used in _StaticTokenCredential
@@ -69,7 +68,9 @@ def _build_client() -> GraphServiceClient:
         if not result and account.get("realm"):
             tenant_authority = f"https://login.microsoftonline.com/{account['realm']}"
             app_tenant = msal.PublicClientApplication(
-                client_id, authority=tenant_authority, token_cache=cache,
+                client_id,
+                authority=tenant_authority,
+                token_cache=cache,
             )
             tenant_accounts = app_tenant.get_accounts()
             if tenant_accounts:
@@ -113,9 +114,7 @@ def _build_client() -> GraphServiceClient:
     return client
 
 
-async def _fetch_events(
-    client: GraphServiceClient, start: str, end: str
-) -> list[dict]:
+async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> list[dict]:
     """calendarView エンドポイントから予定を取得する（/me を使用）."""
     query_params = CalendarViewRequestBuilder.CalendarViewRequestBuilderGetQueryParameters(
         start_date_time=start,

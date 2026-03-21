@@ -8,7 +8,6 @@ Device Code Flow でブラウザ認証し、MSAL トークンキャッシュを 
       python scripts/setup_ms_auth.py
 """
 
-import json
 import os
 import stat
 import sys
@@ -44,13 +43,13 @@ def _update_dotenv(key: str, value: str) -> None:
     with open(DOTENV_FILE, "w") as f:
         f.writelines(lines)
 
+
 SCOPES = ["https://graph.microsoft.com/Calendars.Read"]
 
 
 def main() -> None:
     tenant_id = os.environ.get("AZURE_TENANT_ID")
     client_id = os.environ.get("AZURE_CLIENT_ID")
-    client_secret = os.environ.get("AZURE_CLIENT_SECRET", "")
 
     if not client_id:
         print("環境変数 AZURE_CLIENT_ID を設定してください")
@@ -59,7 +58,9 @@ def main() -> None:
     cache = msal.SerializableTokenCache()
     authority = os.environ.get(
         "AZURE_AUTHORITY",
-        f"https://login.microsoftonline.com/{tenant_id}" if tenant_id else "https://login.microsoftonline.com/consumers",
+        f"https://login.microsoftonline.com/{tenant_id}"
+        if tenant_id
+        else "https://login.microsoftonline.com/consumers",
     )
     app = msal.PublicClientApplication(
         client_id,
@@ -92,7 +93,7 @@ def main() -> None:
 
         print("認証成功!")
         print(f"トークンキャッシュを {TOKEN_FILE} に保存しました（パーミッション: 600）")
-        print(f".env の MS_TOKEN_JSON を更新しました")
+        print(".env の MS_TOKEN_JSON を更新しました")
         print()
         print("次のステップ:")
         print(f"  1. {TOKEN_FILE} の内容を GitHub Secrets の MS_TOKEN_JSON に登録")

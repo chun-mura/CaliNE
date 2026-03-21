@@ -15,7 +15,7 @@ google_calendar.py は未実装のため、要件定義書 (docs/requirements.md
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -106,9 +106,7 @@ def test_sync_events_conflict_then_update(mock_creds, mock_build):
     resp_409 = MagicMock()
     resp_409.status = 409
     resp_409.reason = "Conflict"
-    mock_service.events().insert.return_value.execute.side_effect = HttpError(
-        resp=resp_409, content=b"conflict"
-    )
+    mock_service.events().insert.return_value.execute.side_effect = HttpError(resp=resp_409, content=b"conflict")
 
     # update は成功する
     mock_service.events().update.return_value.execute.return_value = {"id": "event123"}

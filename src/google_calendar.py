@@ -85,13 +85,9 @@ def sync_events(events: list[dict]) -> None:
         }
 
         try:
-            service.events().insert(
-                calendarId=calendar_id, body={**body, "id": event_id}
-            ).execute()
+            service.events().insert(calendarId=calendar_id, body={**body, "id": event_id}).execute()
         except HttpError as e:
             if e.resp.status == 409:
-                service.events().update(
-                    calendarId=calendar_id, eventId=event_id, body=body
-                ).execute()
+                service.events().update(calendarId=calendar_id, eventId=event_id, body=body).execute()
             else:
                 raise

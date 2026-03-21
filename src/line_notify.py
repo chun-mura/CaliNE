@@ -1,9 +1,9 @@
 import os
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
-from zoneinfo import ZoneInfo
 
 LINE_API_URL = "https://api.line.me/v2/bot/message/push"
 JST = ZoneInfo("Asia/Tokyo")
