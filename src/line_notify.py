@@ -1,9 +1,12 @@
+import logging
 import os
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 LINE_API_URL = "https://api.line.me/v2/bot/message/broadcast"
 JST = ZoneInfo("Asia/Tokyo")
@@ -25,6 +28,13 @@ def _broadcast_message(text: str) -> None:
         resp = requests.post(LINE_API_URL, headers=headers, json=body, timeout=10)
         if resp.ok:
             return
+        logger.warning(
+            "LINE API error (attempt %d/%d): %d %s",
+            attempt + 1,
+            MAX_RETRIES,
+            resp.status_code,
+            resp.text,
+        )
         if attempt < MAX_RETRIES - 1:
             time.sleep(2**attempt)
 

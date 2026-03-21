@@ -53,7 +53,7 @@ async def main() -> None:
         logger.info("LINE 通知の送信に成功しました")
         line_ok = True
     except Exception as exc:
-        logger.error("LINE 通知の送信に失敗しました: %s", type(exc).__name__)
+        logger.error("LINE 通知の送信に失敗しました: %s: %s", type(exc).__name__, exc)
 
     # Google カレンダー同期（オプション）
     if enable_gcal:
