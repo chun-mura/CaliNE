@@ -1,0 +1,9 @@
+{
+  "deny": [
+    "Read(.env)",
+    "Read(ms_token_cache.json)",
+    "Read(**/*.pem)",
+    "Read(**/*credentials*)",
+    "Read(**/*secret*)"
+  ]
+}
