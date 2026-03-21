@@ -5,6 +5,10 @@ import logging
 import os
 import sys
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -24,7 +28,7 @@ async def main() -> None:
         events = await get_today_events()
         logger.info("予定を %d 件取得しました", len(events))
     except Exception as exc:
-        logger.error("Outlook からの予定取得に失敗しました: %s", type(exc).__name__)
+        logger.error("Outlook からの予定取得に失敗しました: %s: %s", type(exc).__name__, exc, exc_info=True)
         sys.exit(1)
 
     # ---- 2. LINE 通知 / Google カレンダー同期（独立実行） ----

@@ -14,8 +14,35 @@ import stat
 import sys
 
 import msal
+from dotenv import load_dotenv
+
+load_dotenv()
 
 TOKEN_FILE = "ms_token_cache.json"
+DOTENV_FILE = ".env"
+
+
+def _update_dotenv(key: str, value: str) -> None:
+    """`.env` ファイルの指定キーを更新（なければ追記）."""
+    escaped = value.replace("'", "'\\''")
+    new_line = f"{key}='{escaped}'"
+
+    lines: list[str] = []
+    found = False
+    if os.path.exists(DOTENV_FILE):
+        with open(DOTENV_FILE) as f:
+            for line in f:
+                if line.startswith(f"{key}="):
+                    lines.append(new_line + "\n")
+                    found = True
+                else:
+                    lines.append(line)
+
+    if not found:
+        lines.append(new_line + "\n")
+
+    with open(DOTENV_FILE, "w") as f:
+        f.writelines(lines)
 
 SCOPES = ["https://graph.microsoft.com/Calendars.Read"]
 
@@ -25,15 +52,18 @@ def main() -> None:
     client_id = os.environ.get("AZURE_CLIENT_ID")
     client_secret = os.environ.get("AZURE_CLIENT_SECRET", "")
 
-    if not tenant_id or not client_id:
-        print("環境変数 AZURE_TENANT_ID, AZURE_CLIENT_ID を設定してください")
+    if not client_id:
+        print("環境変数 AZURE_CLIENT_ID を設定してください")
         sys.exit(1)
 
     cache = msal.SerializableTokenCache()
-    app = msal.ConfidentialClientApplication(
+    authority = os.environ.get(
+        "AZURE_AUTHORITY",
+        f"https://login.microsoftonline.com/{tenant_id}" if tenant_id else "https://login.microsoftonline.com/consumers",
+    )
+    app = msal.PublicClientApplication(
         client_id,
-        authority=f"https://login.microsoftonline.com/{tenant_id}",
-        client_credential=client_secret,
+        authority=authority,
         token_cache=cache,
     )
 
@@ -57,8 +87,12 @@ def main() -> None:
         with os.fdopen(fd, "w") as f:
             f.write(token_json)
 
+        # .env ファイルに MS_TOKEN_JSON を書き込み（既存の値があれば置換）
+        _update_dotenv("MS_TOKEN_JSON", token_json)
+
         print("認証成功!")
         print(f"トークンキャッシュを {TOKEN_FILE} に保存しました（パーミッション: 600）")
+        print(f".env の MS_TOKEN_JSON を更新しました")
         print()
         print("次のステップ:")
         print(f"  1. {TOKEN_FILE} の内容を GitHub Secrets の MS_TOKEN_JSON に登録")

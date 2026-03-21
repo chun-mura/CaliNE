@@ -32,29 +32,57 @@ def _build_client() -> GraphServiceClient:
     """Graph API クライアントを生成する（委任権限）."""
     tenant_id = os.environ["AZURE_TENANT_ID"]
     client_id = os.environ["AZURE_CLIENT_ID"]
-    ms_token_json = os.environ.get("MS_TOKEN_JSON", "")
+    # トークンキャッシュの読み込み:
+    #   ローカル: ms_token_cache.json ファイルから読み込み
+    #   GitHub Actions: 環境変数 MS_TOKEN_JSON から読み込み
+    token_cache_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ms_token_cache.json")
+    ms_token_json = ""
+    if os.path.exists(token_cache_file):
+        with open(token_cache_file) as f:
+            ms_token_json = f.read()
+    else:
+        ms_token_json = os.environ.get("MS_TOKEN_JSON", "")
 
     if ms_token_json:
-        # リフレッシュトークンからアクセストークンを取得（GitHub Actions 等での自動実行用）
         import msal
 
         cache = msal.SerializableTokenCache()
         cache.deserialize(ms_token_json)
-        app = msal.ConfidentialClientApplication(
+        authority = os.environ.get(
+            "AZURE_AUTHORITY",
+            f"https://login.microsoftonline.com/{tenant_id}",
+        )
+        app = msal.PublicClientApplication(
             client_id,
-            authority=f"https://login.microsoftonline.com/{tenant_id}",
-            client_credential=os.environ.get("AZURE_CLIENT_SECRET", ""),
+            authority=authority,
             token_cache=cache,
         )
         graph_scopes = ["https://graph.microsoft.com/Calendars.Read"]
         accounts = app.get_accounts()
-        if accounts:
-            result = app.acquire_token_silent(graph_scopes, account=accounts[0])
-        else:
+        if not accounts:
             raise RuntimeError("No accounts found in token cache. Re-run setup_ms_auth.py")
 
+        account = accounts[0]
+        result = app.acquire_token_silent(graph_scopes, account=account)
+        # /common authority ではキャッシュの realm と一致せず None になる場合がある。
+        # アカウントの realm（テナントID）で再試行する。
+        if not result and account.get("realm"):
+            tenant_authority = f"https://login.microsoftonline.com/{account['realm']}"
+            app_tenant = msal.PublicClientApplication(
+                client_id, authority=tenant_authority, token_cache=cache,
+            )
+            tenant_accounts = app_tenant.get_accounts()
+            if tenant_accounts:
+                result = app_tenant.acquire_token_silent(graph_scopes, account=tenant_accounts[0])
         if not result or "access_token" not in result:
-            raise RuntimeError("Failed to acquire token from cache")
+            raise RuntimeError(
+                f"Failed to acquire token: {result.get('error_description', 'unknown') if result else 'no result'}"
+            )
+
+        # ローカル実行時: 更新されたキャッシュをファイルに書き戻す
+        if os.path.exists(token_cache_file) and cache.has_state_changed:
+            with open(token_cache_file, "w") as f:
+                f.write(cache.serialize())
 
         from azure.core.credentials import AccessToken, TokenCredential
 
@@ -77,7 +105,11 @@ def _build_client() -> GraphServiceClient:
             client_id=client_id,
         )
 
-    client = GraphServiceClient(credentials=credential, scopes=SCOPES)
+    client = GraphServiceClient(credentials=credential, scopes=["https://graph.microsoft.com/.default"])
+    # httpx が base_url に末尾スラッシュを付加するため、URL テンプレート展開時に
+    # "https://graph.microsoft.com/v1.0//me/..." のような二重スラッシュが生じる。
+    # これを除去して正しい URL が生成されるようにする。
+    client.request_adapter.base_url = client.request_adapter.base_url.rstrip("/")
     return client
 
 
