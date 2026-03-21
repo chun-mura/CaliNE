@@ -9,6 +9,8 @@ GitHub Actions で毎朝 JST 10:00 に自動実行。
 
 ### 1. Azure Portal（Microsoft 365）
 
+> **個人の Azure アカウント** でアプリ登録を行ってください。企業の Azure AD テナントではなく、個人サブスクリプション（または無料の Azure AD テナント）で作成することを推奨します。
+
 1. [Azure Portal](https://portal.azure.com/) > アプリの登録 > 新規登録
    - 「サポートされているアカウントの種類」は **「任意の組織ディレクトリ内のアカウントと個人の Microsoft アカウント」** を選択
 2. リダイレクト URI: プラットフォームは **「Web」** を選択し、`https://login.microsoftonline.com/common/oauth2/nativeclient` を設定
@@ -38,7 +40,15 @@ AZURE_TENANT_ID=$AZURE_TENANT_ID AZURE_CLIENT_ID=$AZURE_CLIENT_ID AZURE_CLIENT_S
 ```
 
 表示された URL にブラウザでアクセスし、コードを入力してサインイン。
+**サインインには企業用（組織）の Microsoft アカウントを使用してください。** 予定を取得する対象のカレンダーがこのアカウントに紐づきます。
+
 出力された JSON を GitHub Secrets の `MS_TOKEN_JSON` に登録する。
+
+既に `ms_token_cache.json` がある場合は、認証なしで `.env` に反映できる:
+
+```bash
+python3 scripts/setup_ms_auth.py --sync-env
+```
 
 > リフレッシュトークンは90日間有効（使用するたびにリセット）。
 > 毎日実行していれば期限切れにはなりませんが、長期間停止した場合は再実行が必要です。
