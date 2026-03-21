@@ -1,11 +1,15 @@
-"""Microsoft 365 初回認証スクリプト.
+"""Microsoft 365 認証スクリプト.
 
 Device Code Flow でブラウザ認証し、MSAL トークンキャッシュを JSON ファイルに保存する。
 保存されたファイルの内容を GitHub Secrets の MS_TOKEN_JSON に登録する。
 
 使い方:
-    AZURE_TENANT_ID=xxx AZURE_CLIENT_ID=yyy AZURE_CLIENT_SECRET=zzz \
+    # 初回認証（Device Code Flow）
+    AZURE_TENANT_ID=xxx AZURE_CLIENT_ID=yyy \
       python scripts/setup_ms_auth.py
+
+    # 既存の ms_token_cache.json を .env に反映
+    python scripts/setup_ms_auth.py --sync-env
 """
 
 import os
@@ -22,32 +26,77 @@ DOTENV_FILE = ".env"
 
 
 def _update_dotenv(key: str, value: str) -> None:
-    """`.env` ファイルの指定キーを更新（なければ追記）."""
-    escaped = value.replace("'", "'\\''")
-    new_line = f"{key}='{escaped}'"
+    """`.env` ファイルの指定キーを更新（なければ追記）.
+
+    既存の値がある場合は複数行も含めて削除してから末尾に追記する。
+    シングルクォートで囲まれた複数行の値（例: JSON）にも対応。
+    """
+    import json
+
+    escaped = json.dumps(value)
+    new_line = f"{key}={escaped}\n"
+    prefix = f"{key}="
 
     lines: list[str] = []
-    found = False
+    skip_quote: str | None = None  # スキップ中の開始クォート文字
     if os.path.exists(DOTENV_FILE):
         with open(DOTENV_FILE) as f:
             for line in f:
-                if line.startswith(f"{key}="):
-                    lines.append(new_line + "\n")
-                    found = True
-                else:
-                    lines.append(line)
+                if skip_quote is not None:
+                    # 開始クォートと同じ文字で行末が閉じていればスキップ終了
+                    if line.rstrip("\n").endswith(skip_quote):
+                        skip_quote = None
+                    continue
+                stripped = line.lstrip()
+                if stripped.startswith(prefix):
+                    after_eq = stripped[len(prefix) :].strip()
+                    quote = _multiline_open_quote(after_eq)
+                    if quote is not None:
+                        skip_quote = quote
+                    continue
+                lines.append(line)
 
-    if not found:
-        lines.append(new_line + "\n")
+    lines.append(new_line)
 
     with open(DOTENV_FILE, "w") as f:
         f.writelines(lines)
 
 
+def _multiline_open_quote(value: str) -> str | None:
+    """値が開きクォートで始まり同じ行で閉じていなければ、そのクォート文字を返す.
+
+    単一行の値や非クォート値の場合は None を返す。
+    """
+    for quote in ("'", '"'):
+        if value.startswith(quote):
+            rest = value[1:]
+            if quote not in rest:
+                return quote
+            return None
+    return None
+
+
 SCOPES = ["https://graph.microsoft.com/Calendars.Read"]
 
 
+def sync_env() -> None:
+    """既存の ms_token_cache.json の内容を .env の MS_TOKEN_JSON に反映する."""
+    if not os.path.exists(TOKEN_FILE):
+        print(f"{TOKEN_FILE} が見つかりません")
+        sys.exit(1)
+
+    with open(TOKEN_FILE) as f:
+        token_json = f.read()
+
+    _update_dotenv("MS_TOKEN_JSON", token_json)
+    print(f"{TOKEN_FILE} の内容を .env の MS_TOKEN_JSON に反映しました")
+
+
 def main() -> None:
+    if "--sync-env" in sys.argv:
+        sync_env()
+        return
+
     tenant_id = os.environ.get("AZURE_TENANT_ID")
     client_id = os.environ.get("AZURE_CLIENT_ID")
 
