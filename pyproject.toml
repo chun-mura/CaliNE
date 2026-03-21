@@ -12,3 +12,27 @@ select = ["E", "F", "I", "W", "UP"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.liccheck]
+authorized_licenses = [
+    "MIT License",
+    "MIT",
+    "BSD License",
+    "BSD",
+    "ISC License",
+    "ISC",
+    "Apache Software License",
+    "Apache Software",
+    "Apache-2.0",
+    "Python Software Foundation License",
+    "PSF",
+    "Mozilla Public License 2.0",
+    "MPL-2.0",
+]
+unauthorized_licenses = [
+    "GNU General Public License v3 (GPLv3)",
+    "GNU General Public License v2 (GPLv2)",
+]
+[tool.liccheck.dependencies]
+# 推移的依存も含めてチェック対象
+level = "cautious"
