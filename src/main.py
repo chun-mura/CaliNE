@@ -4,7 +4,9 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
+import jpholiday
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,9 +17,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+JST = timezone(timedelta(hours=9))
+
 
 async def main() -> None:
     """Outlook から当日の予定を取得し、LINE 通知と Google カレンダー同期を行う."""
+    today = datetime.now(JST).date()
+    if jpholiday.is_holiday(today):
+        logger.info("本日 %s は祝日（%s）のためスキップします", today, jpholiday.is_holiday_name(today))
+        return
+
     from src.outlook import get_today_events
 
     enable_gcal = os.environ.get("ENABLE_GOOGLE_CALENDAR", "false").lower() == "true"
