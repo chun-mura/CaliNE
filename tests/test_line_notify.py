@@ -62,7 +62,7 @@ def test_send_daily_schedule_with_events(mock_dt, mock_post):
     text = body["messages"][0]["text"]
 
     # ヘッダー確認
-    assert "今日の予定（3/20）" in text
+    assert "明日の予定（3/21）" in text
     # 各予定の時刻とタイトル確認
     assert "09:00-10:00 チームミーティング" in text
     assert "11:00-12:00 1on1" in text
@@ -90,7 +90,7 @@ def test_send_daily_schedule_no_events(mock_dt, mock_post):
     body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
     text = body["messages"][0]["text"]
 
-    assert "今日の予定（3/20）" in text
+    assert "明日の予定（3/21）" in text
     assert "予定はありません" in text
     # 件数フッターは含まれないこと
     assert "全" not in text

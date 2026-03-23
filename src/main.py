@@ -21,20 +21,20 @@ JST = timezone(timedelta(hours=9))
 
 
 async def main() -> None:
-    """Outlook から当日の予定を取得し、LINE 通知と Google カレンダー同期を行う."""
-    today = datetime.now(JST).date()
-    if jpholiday.is_holiday(today):
-        logger.info("本日 %s は祝日（%s）のためスキップします", today, jpholiday.is_holiday_name(today))
+    """Outlook から翌日の予定を取得し、LINE 通知と Google カレンダー同期を行う."""
+    tomorrow = (datetime.now(JST) + timedelta(days=1)).date()
+    if jpholiday.is_holiday(tomorrow):
+        logger.info("明日 %s は祝日（%s）のためスキップします", tomorrow, jpholiday.is_holiday_name(tomorrow))
         return
 
-    from src.outlook import get_today_events
+    from src.outlook import get_next_day_events
 
     enable_gcal = os.environ.get("ENABLE_GOOGLE_CALENDAR", "false").lower() == "true"
 
     # ---- 1. Outlook から予定を取得 ----
-    logger.info("Outlook から当日の予定を取得します")
+    logger.info("Outlook から翌日の予定を取得します")
     try:
-        events = await get_today_events()
+        events = await get_next_day_events()
         logger.info("予定を %d 件取得しました", len(events))
     except Exception as exc:
         logger.error("Outlook からの予定取得に失敗しました: %s: %s", type(exc).__name__, exc, exc_info=True)

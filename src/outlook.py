@@ -145,17 +145,17 @@ async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> lis
     return events
 
 
-async def get_today_events() -> list[dict]:
-    """当日 (JST) の予定を取得して時刻順のリストで返す.
+async def get_next_day_events() -> list[dict]:
+    """翌日 (JST) の予定を取得して時刻順のリストで返す.
 
     Returns:
         [{"subject": str, "start": datetime, "end": datetime}, ...]
     """
     client = _build_client()
 
-    now_jst = datetime.now(JST)
-    start_of_day = now_jst.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = now_jst.replace(hour=23, minute=59, second=59, microsecond=0)
+    tomorrow = datetime.now(JST) + timedelta(days=1)
+    start_of_day = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = tomorrow.replace(hour=23, minute=59, second=59, microsecond=0)
 
     start_iso = start_of_day.strftime("%Y-%m-%dT%H:%M:%S")
     end_iso = end_of_day.strftime("%Y-%m-%dT%H:%M:%S")

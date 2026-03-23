@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -42,8 +42,8 @@ def _broadcast_message(text: str) -> None:
 
 
 def send_daily_schedule(events: list[dict]) -> None:
-    now = datetime.now(JST)
-    header = f"\U0001f4c5 今日の予定（{now.month}/{now.day}）"
+    tomorrow = datetime.now(JST) + timedelta(days=1)
+    header = f"\U0001f4c5 明日の予定（{tomorrow.month}/{tomorrow.day}）"
 
     if not events:
         text = f"{header}\n\n予定はありません"

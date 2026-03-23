@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.outlook import JST, get_today_events
+from src.outlook import JST, get_next_day_events
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -40,7 +40,7 @@ def _make_event(subject: str, start_hour: int, end_hour: int):
 @patch.dict("os.environ", ENV_VARS, clear=False)
 @patch("src.outlook._build_client")
 @patch("src.outlook._fetch_events", new_callable=AsyncMock)
-async def test_get_today_events_multiple_sorted(mock_fetch, mock_build):
+async def test_get_next_day_events_multiple_sorted(mock_fetch, mock_build):
     """正常系: 複数の予定が時刻順にソートされて返る."""
     mock_build.return_value = MagicMock()
 
@@ -66,7 +66,7 @@ async def test_get_today_events_multiple_sorted(mock_fetch, mock_build):
         },
     ]
 
-    events = await get_today_events()
+    events = await get_next_day_events()
 
     assert len(events) == 3
     assert events[0]["subject"] == "朝会"
@@ -82,12 +82,12 @@ async def test_get_today_events_multiple_sorted(mock_fetch, mock_build):
 @patch.dict("os.environ", ENV_VARS, clear=False)
 @patch("src.outlook._build_client")
 @patch("src.outlook._fetch_events", new_callable=AsyncMock)
-async def test_get_today_events_empty(mock_fetch, mock_build):
+async def test_get_next_day_events_empty(mock_fetch, mock_build):
     """正常系: 予定が 0 件の場合、空リストが返る."""
     mock_build.return_value = MagicMock()
     mock_fetch.return_value = []
 
-    events = await get_today_events()
+    events = await get_next_day_events()
 
     assert events == []
 
@@ -97,13 +97,13 @@ async def test_get_today_events_empty(mock_fetch, mock_build):
 @patch("src.outlook._build_client")
 @patch("src.outlook._fetch_events", new_callable=AsyncMock)
 @patch("src.outlook.asyncio.sleep", new_callable=AsyncMock)  # リトライの sleep をスキップ
-async def test_get_today_events_api_failure(mock_sleep, mock_fetch, mock_build):
+async def test_get_next_day_events_api_failure(mock_sleep, mock_fetch, mock_build):
     """異常系: API 呼び出しが全リトライ失敗した場合、RuntimeError が送出される."""
     mock_build.return_value = MagicMock()
     mock_fetch.side_effect = ConnectionError("network error")
 
     with pytest.raises(RuntimeError, match="Graph API call failed after"):
-        await get_today_events()
+        await get_next_day_events()
 
     # 3 回リトライしていること
     assert mock_fetch.call_count == 3

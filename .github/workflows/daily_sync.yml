@@ -2,7 +2,7 @@ name: Daily Calendar Sync
 
 on:
   schedule:
-    - cron: "0 1 * * 1-5" # UTC 01:00 = JST 10:00（平日のみ）
+    - cron: "0 11 * * 0-4" # UTC 11:00 = JST 20:00（日〜木 = 翌日が平日）
   workflow_dispatch:
 
 permissions:
