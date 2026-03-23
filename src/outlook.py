@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 
 from azure.identity import DeviceCodeCredential
 from msgraph import GraphServiceClient
+from msgraph.generated.models.free_busy_status import FreeBusyStatus
+from msgraph.generated.models.response_type import ResponseType
 from msgraph.generated.users.item.calendar_view.calendar_view_request_builder import (
     CalendarViewRequestBuilder,
 )
@@ -119,7 +121,7 @@ async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> lis
     query_params = CalendarViewRequestBuilder.CalendarViewRequestBuilderGetQueryParameters(
         start_date_time=start,
         end_date_time=end,
-        select=["id", "subject", "start", "end", "isCancelled"],
+        select=["id", "subject", "start", "end", "isCancelled", "responseStatus", "showAs"],
         orderby=["start/dateTime asc"],
     )
     request_config = CalendarViewRequestBuilder.CalendarViewRequestBuilderGetRequestConfiguration(
@@ -135,6 +137,10 @@ async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> lis
     if result and result.value:
         for event in result.value:
             if event.is_cancelled:
+                continue
+            if event.response_status and event.response_status.response == ResponseType.Declined:
+                continue
+            if event.show_as == FreeBusyStatus.Free:
                 continue
             events.append(
                 {
