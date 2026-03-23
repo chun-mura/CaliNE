@@ -119,7 +119,7 @@ async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> lis
     query_params = CalendarViewRequestBuilder.CalendarViewRequestBuilderGetQueryParameters(
         start_date_time=start,
         end_date_time=end,
-        select=["id", "subject", "start", "end"],
+        select=["id", "subject", "start", "end", "isCancelled"],
         orderby=["start/dateTime asc"],
     )
     request_config = CalendarViewRequestBuilder.CalendarViewRequestBuilderGetRequestConfiguration(
@@ -134,6 +134,8 @@ async def _fetch_events(client: GraphServiceClient, start: str, end: str) -> lis
     events: list[dict] = []
     if result and result.value:
         for event in result.value:
+            if event.is_cancelled:
+                continue
             events.append(
                 {
                     "id": event.id or "",
