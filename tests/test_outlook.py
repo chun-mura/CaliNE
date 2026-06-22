@@ -16,6 +16,7 @@ ENV_VARS = {
     "AZURE_TENANT_ID": "fake-tenant",
     "AZURE_CLIENT_ID": "fake-client",
     "AZURE_CLIENT_SECRET": "fake-secret",
+    "AZURE_USER_ID": "fake-user@example.com",
 }
 
 
