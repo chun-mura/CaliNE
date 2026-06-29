@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from kiota_abstractions.api_error import APIError
 
-from src.outlook import JST, get_next_day_events
+from src.outlook import JST, _build_credential, get_next_day_events
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -124,3 +124,46 @@ async def test_get_next_day_events_401_no_retry(mock_fetch, mock_build):
         await get_next_day_events()
 
     assert mock_fetch.call_count == 1
+
+
+@patch("src.outlook.ClientAssertionCredential")
+def test_build_credential_uses_oidc_on_github_actions(mock_assertion):
+    """GitHub Actions 環境では ClientAssertionCredential を使用する."""
+    env = {
+        "AZURE_TENANT_ID": "fake-tenant",
+        "AZURE_CLIENT_ID": "fake-client",
+        "ACTIONS_ID_TOKEN_REQUEST_URL": "https://example.com/token?",
+        "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "gh-token",
+    }
+    with patch.dict("os.environ", env, clear=True):
+        _build_credential()
+
+    mock_assertion.assert_called_once_with(
+        tenant_id="fake-tenant",
+        client_id="fake-client",
+        func=mock_assertion.call_args.kwargs["func"],
+    )
+
+
+@patch("src.outlook.ClientSecretCredential")
+def test_build_credential_uses_secret_locally(mock_secret):
+    """ローカル環境では ClientSecretCredential を使用する."""
+    with patch.dict("os.environ", ENV_VARS, clear=True):
+        _build_credential()
+
+    mock_secret.assert_called_once_with(
+        tenant_id="fake-tenant",
+        client_id="fake-client",
+        client_secret="fake-secret",
+    )
+
+
+def test_build_credential_raises_without_auth():
+    """認証情報がない場合は RuntimeError を送出する."""
+    env = {
+        "AZURE_TENANT_ID": "fake-tenant",
+        "AZURE_CLIENT_ID": "fake-client",
+    }
+    with patch.dict("os.environ", env, clear=True):
+        with pytest.raises(RuntimeError, match="Azure 認証情報がありません"):
+            _build_credential()

@@ -10,18 +10,25 @@ GitHub Actions で毎朝 JST 10:00 に自動実行。
 ### 1. Azure Portal（Microsoft 365）
 
 > **Client Credentials Flow（アプリケーション権限）** を使用します。ユーザーのサインインやトークン更新は不要です。
-> 対象ユーザーは **同じ Azure AD テナント内の組織アカウント** である必要があります（個人の outlook.com アカウントは非対応）。
+> GitHub Actions では **OIDC（Federated Identity Credentials）** で認証するため、クライアントシークレットの更新は不要です。
 
 1. [Azure Portal](https://portal.azure.com/) > Microsoft Entra ID > アプリの登録 > 新規登録
    - 「サポートされているアカウントの種類」は **「この組織ディレクトリのみに含まれるアカウント」** を選択
 2. API のアクセス許可 > アクセス許可の追加 > Microsoft Graph > **アプリケーションの許可** > `Calendars.Read` を追加
 3. **管理者の同意を付与**（「○○ に管理者の同意が付与されました」と表示されること）
-4. 証明書とシークレット > クライアントシークレットを作成
+4. 証明書とシークレット > **フェデレーション資格情報** を追加
+   - シナリオ: **GitHub Actions で Azure リソースにデプロイする**
+   - Organization: GitHub のユーザー名または Organization 名
+   - Repository: `CaliNE`（リポジトリ名）
+   - Entity type: **Environment**
+   - GitHub environment name: `production`（`daily_sync.yml` の `environment` と一致させる）
+   - 名前: 任意（例: `github-actions-production`）
 5. 以下を GitHub Secrets に登録:
    - `AZURE_TENANT_ID`（テナント ID）
    - `AZURE_CLIENT_ID`（アプリケーション ID）
-   - `AZURE_CLIENT_SECRET`（クライアントシークレットの値）
    - `AZURE_USER_ID`（予定を取得するユーザーの UPN またはオブジェクト ID。例: `user@company.com`）
+
+> **ローカル実行時のみ:** 証明書とシークレット > クライアントシークレットを作成し、`.env` の `AZURE_CLIENT_SECRET` に設定してください。
 
 > **401 Unauthorized が出る場合:**
 > - `Calendars.Read` が **委任された権限** になっていないか確認（**アプリケーションの許可** が必要）
@@ -44,11 +51,12 @@ GitHub Actions で毎朝 JST 10:00 に自動実行。
 |---|---|---|
 | `AZURE_TENANT_ID` | Yes | Azure AD テナント ID |
 | `AZURE_CLIENT_ID` | Yes | Azure アプリケーション ID |
-| `AZURE_CLIENT_SECRET` | Yes | Azure クライアントシークレット |
 | `AZURE_USER_ID` | Yes | 予定取得対象ユーザーの UPN またはオブジェクト ID |
 | `LINE_CHANNEL_ACCESS_TOKEN` | Yes | LINE チャネルアクセストークン |
 | `GOOGLE_CREDENTIALS_JSON` | No | GCP OAuth クライアント JSON（Google連携時のみ） |
 | `GOOGLE_TOKEN_JSON` | No | Google 認証トークン JSON（Google連携時のみ） |
+
+> ローカル実行時は `.env` に `AZURE_CLIENT_SECRET` も設定してください（GitHub Secrets には不要）。
 
 ### 4. 動作確認
 
@@ -102,6 +110,6 @@ print(json.dumps({'token': creds.token, 'refresh_token': creds.refresh_token}))
 
 | サービス | トークン | 有効期限 | 期限切れ時の対応 |
 |---|---|---|---|
-| Microsoft | アクセストークン | 1時間 | Client Credentials で自動取得（対応不要） |
+| Microsoft | アクセストークン | 1時間 | OIDC / Client Credentials で自動取得（対応不要） |
 | Google | アクセストークン | 1時間 | 自動更新（対応不要） |
 | Google | リフレッシュトークン | テスト: 7日 / 本番: 無期限 | GCPを本番公開にするか、再認証 |

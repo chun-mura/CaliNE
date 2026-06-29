@@ -1,15 +1,18 @@
 """Outlook カレンダーから当日の予定を取得するモジュール.
 
 認証: Client Credentials Flow（アプリケーション権限）
-Azure AD アプリの Client Secret を使用。ユーザートークン不要。
+- GitHub Actions: OIDC (Federated Identity Credentials)
+- ローカル: Client Secret
 """
 
 import asyncio
+import json
 import os
 import re
+import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from azure.identity import ClientSecretCredential
+from azure.identity import ClientAssertionCredential, ClientSecretCredential
 from kiota_abstractions.api_error import APIError
 from msgraph import GraphServiceClient
 from msgraph.generated.models.free_busy_status import FreeBusyStatus
@@ -31,14 +34,50 @@ _GRAPH_AUTH_HINT = (
 )
 
 
+def _get_github_oidc_token() -> str:
+    """GitHub Actions が発行する OIDC トークンを取得する."""
+    request_url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
+    request_token = os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+    url = f"{request_url}&audience=api://AzureADTokenExchange"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {request_token}"})
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp)["value"]
+
+
+def _build_credential() -> ClientAssertionCredential | ClientSecretCredential:
+    """認証情報を生成する.
+
+    GitHub Actions では OIDC、ローカルでは Client Secret を使用する。
+    """
+    tenant_id = os.environ["AZURE_TENANT_ID"]
+    client_id = os.environ["AZURE_CLIENT_ID"]
+
+    if os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL") and os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN"):
+        return ClientAssertionCredential(
+            tenant_id=tenant_id,
+            client_id=client_id,
+            func=_get_github_oidc_token,
+        )
+
+    client_secret = os.environ.get("AZURE_CLIENT_SECRET")
+    if client_secret:
+        return ClientSecretCredential(
+            tenant_id=tenant_id,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+    raise RuntimeError(
+        "Azure 認証情報がありません。GitHub Actions では OIDC、ローカルでは AZURE_CLIENT_SECRET を設定してください。"
+    )
+
+
 def _build_client() -> GraphServiceClient:
     """Graph API クライアントを生成する（アプリケーション権限）."""
-    credential = ClientSecretCredential(
-        tenant_id=os.environ["AZURE_TENANT_ID"],
-        client_id=os.environ["AZURE_CLIENT_ID"],
-        client_secret=os.environ["AZURE_CLIENT_SECRET"],
+    client = GraphServiceClient(
+        credentials=_build_credential(),
+        scopes=["https://graph.microsoft.com/.default"],
     )
-    client = GraphServiceClient(credentials=credential, scopes=["https://graph.microsoft.com/.default"])
     client.request_adapter.base_url = client.request_adapter.base_url.rstrip("/")
     return client
 

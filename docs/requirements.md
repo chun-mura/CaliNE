@@ -112,7 +112,6 @@ Outlookカレンダー（Microsoft 365）から当日の予定を取得し、LIN
 |-------------|--------|------|
 | `AZURE_TENANT_ID` | GitHub Secrets | Azure ADテナントID |
 | `AZURE_CLIENT_ID` | GitHub Secrets | Azureアプリ クライアントID |
-| `AZURE_CLIENT_SECRET` | GitHub Secrets | Azureアプリ クライアントシークレット |
 | `AZURE_USER_ID` | GitHub Secrets | 対象ユーザーの UPN またはオブジェクト ID |
 | `LINE_CHANNEL_ACCESS_TOKEN` | GitHub Secrets | LINE Messaging APIトークン（Broadcast） |
 | `GOOGLE_CREDENTIALS_JSON` | GitHub Secrets | Google OAuth2認証情報（JSON） |
@@ -172,8 +171,8 @@ CaliNE/
 2. 「サポートされるアカウントの種類」→ 「この組織のディレクトリ内のアカウントのみ」
 3. APIのアクセス許可 → Microsoft Graph → アプリケーションの許可 → `Calendars.Read` を追加
 4. 管理者の同意を付与
-5. 証明書とシークレット → 新しいクライアントシークレットを作成
-6. テナントID、クライアントID、クライアントシークレットを控える
+5. 証明書とシークレット → フェデレーション資格情報を追加（GitHub Actions OIDC、`production` environment）
+6. テナントID、クライアントID、対象ユーザーIDを控える
 
 ### 7.2 LINE（通知）
 1. LINE Developers → プロバイダー作成 → Messaging APIチャネル作成
