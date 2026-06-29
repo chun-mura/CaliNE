@@ -113,7 +113,7 @@ Outlookカレンダー（Microsoft 365）から当日の予定を取得し、LIN
 | `AZURE_TENANT_ID` | GitHub Secrets | Azure ADテナントID |
 | `AZURE_CLIENT_ID` | GitHub Secrets | Azureアプリ クライアントID |
 | `AZURE_CLIENT_SECRET` | GitHub Secrets | Azureアプリ クライアントシークレット |
-| `MS_USER_ID` | GitHub Secrets | 対象ユーザーのID（またはUPN） |
+| `AZURE_USER_ID` | GitHub Secrets | 対象ユーザーの UPN またはオブジェクト ID |
 | `LINE_CHANNEL_ACCESS_TOKEN` | GitHub Secrets | LINE Messaging APIトークン（Broadcast） |
 | `GOOGLE_CREDENTIALS_JSON` | GitHub Secrets | Google OAuth2認証情報（JSON） |
 | `GOOGLE_TOKEN_JSON` | GitHub Secrets | Google OAuthリフレッシュトークン（JSON） |

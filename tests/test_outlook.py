@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from kiota_abstractions.api_error import APIError
 
 from src.outlook import JST, get_next_day_events
 
@@ -108,3 +109,18 @@ async def test_get_next_day_events_api_failure(mock_sleep, mock_fetch, mock_buil
 
     # 3 回リトライしていること
     assert mock_fetch.call_count == 3
+
+
+@pytest.mark.asyncio
+@patch.dict("os.environ", ENV_VARS, clear=False)
+@patch("src.outlook._build_client")
+@patch("src.outlook._fetch_events", new_callable=AsyncMock)
+async def test_get_next_day_events_401_no_retry(mock_fetch, mock_build):
+    """異常系: 401 は権限不足と判断し、リトライせずに RuntimeError を送出する."""
+    mock_build.return_value = MagicMock()
+    mock_fetch.side_effect = APIError("Unauthorized", 401, "Unauthorized")
+
+    with pytest.raises(RuntimeError, match="Graph API が 401"):
+        await get_next_day_events()
+
+    assert mock_fetch.call_count == 1

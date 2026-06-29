@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from azure.identity import ClientSecretCredential
+from kiota_abstractions.api_error import APIError
 from msgraph import GraphServiceClient
 from msgraph.generated.models.free_busy_status import FreeBusyStatus
 from msgraph.generated.models.response_type import ResponseType
@@ -22,6 +23,12 @@ JST = timezone(timedelta(hours=9))
 MAX_RETRIES = 3
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+_GRAPH_AUTH_HINT = (
+    "Graph API が 401 を返しました。Client Credentials Flow では "
+    "Microsoft Graph の「アプリケーション」権限 Calendars.Read と管理者の同意が必要です。"
+    " 委任された権限のみ設定している場合は README の Azure 設定手順を確認してください。"
+)
 
 
 def _build_client() -> GraphServiceClient:
@@ -95,6 +102,12 @@ async def get_next_day_events() -> list[dict]:
             events = await _fetch_events(client, user_id, start_iso, end_iso)
             events.sort(key=lambda e: e["start"])
             return events
+        except APIError as exc:
+            last_exc = exc
+            if exc.response_status_code == 401:
+                raise RuntimeError(_GRAPH_AUTH_HINT) from exc
+            if attempt < MAX_RETRIES - 1:
+                await asyncio.sleep(2**attempt)
         except Exception as exc:
             last_exc = exc
             if attempt < MAX_RETRIES - 1:
