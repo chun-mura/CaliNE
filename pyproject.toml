@@ -19,6 +19,7 @@ authorized_licenses = [
     "MIT",
     "BSD License",
     "BSD",
+    "BSD-3-Clause",
     "ISC License",
     "ISC",
     "Apache Software License",
