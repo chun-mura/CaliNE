@@ -1,6 +1,6 @@
 """Outlook カレンダー取得モジュールのテスト."""
 
-from datetime import datetime
+from datetime import date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -68,7 +68,9 @@ async def test_get_next_day_events_multiple_sorted(mock_fetch, mock_build):
         },
     ]
 
-    events = await get_next_day_events()
+    events = await get_next_day_events(date(2026, 3, 20))
+
+    assert mock_fetch.call_args.args[2:] == ("2026-03-20T00:00:00", "2026-03-20T23:59:59")
 
     assert len(events) == 3
     assert events[0]["subject"] == "朝会"
@@ -89,7 +91,7 @@ async def test_get_next_day_events_empty(mock_fetch, mock_build):
     mock_build.return_value = MagicMock()
     mock_fetch.return_value = []
 
-    events = await get_next_day_events()
+    events = await get_next_day_events(date(2026, 3, 20))
 
     assert events == []
 
@@ -105,7 +107,7 @@ async def test_get_next_day_events_api_failure(mock_sleep, mock_fetch, mock_buil
     mock_fetch.side_effect = ConnectionError("network error")
 
     with pytest.raises(RuntimeError, match="Graph API call failed after"):
-        await get_next_day_events()
+        await get_next_day_events(date(2026, 3, 20))
 
     # 3 回リトライしていること
     assert mock_fetch.call_count == 3
@@ -121,7 +123,7 @@ async def test_get_next_day_events_401_no_retry(mock_fetch, mock_build):
     mock_fetch.side_effect = APIError("Unauthorized", 401, "Unauthorized")
 
     with pytest.raises(RuntimeError, match="Graph API が 401"):
-        await get_next_day_events()
+        await get_next_day_events(date(2026, 3, 20))
 
     assert mock_fetch.call_count == 1
 

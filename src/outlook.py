@@ -10,7 +10,7 @@ import json
 import os
 import re
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from azure.identity import ClientAssertionCredential, ClientSecretCredential
 from kiota_abstractions.api_error import APIError
@@ -119,8 +119,8 @@ async def _fetch_events(client: GraphServiceClient, user_id: str, start: str, en
     return events
 
 
-async def get_next_day_events() -> list[dict]:
-    """翌日 (JST) の予定を取得して時刻順のリストで返す.
+async def get_next_day_events(target_date: date) -> list[dict]:
+    """指定日 (JST) の予定を取得して時刻順のリストで返す.
 
     Returns:
         [{"subject": str, "start": datetime, "end": datetime}, ...]
@@ -128,9 +128,8 @@ async def get_next_day_events() -> list[dict]:
     client = _build_client()
     user_id = os.environ["AZURE_USER_ID"]
 
-    tomorrow = datetime.now(JST) + timedelta(days=1)
-    start_of_day = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = tomorrow.replace(hour=23, minute=59, second=59, microsecond=0)
+    start_of_day = datetime.combine(target_date, datetime.min.time(), tzinfo=JST)
+    end_of_day = start_of_day.replace(hour=23, minute=59, second=59)
 
     start_iso = start_of_day.strftime("%Y-%m-%dT%H:%M:%S")
     end_iso = end_of_day.strftime("%Y-%m-%dT%H:%M:%S")

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "caline-scheduler",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-19",
+  "triggers": {
+    // Cloudflare CronはUTC。UTC 11:00 = JST 20:00（日〜木）。
+    "crons": ["0 11 * * SUN-THU"]
+  },
+  "observability": {
+    "enabled": true,
+    "issues": {
+      "enabled": true
+    },
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  }
+}

@@ -1,6 +1,6 @@
 """LINE 通知モジュールのテスト."""
 
-from datetime import datetime
+from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -54,11 +54,12 @@ def test_send_daily_schedule_with_events(mock_dt, mock_post):
         ("プロジェクトレビュー", 14, 15),
     )
 
-    send_daily_schedule(events)
+    send_daily_schedule(events, date(2026, 3, 21))
 
     mock_post.assert_called_once()
     call_kwargs = mock_post.call_args
     body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+    headers = call_kwargs.kwargs.get("headers") or call_kwargs[1].get("headers")
     text = body["messages"][0]["text"]
 
     # ヘッダー確認
@@ -70,6 +71,8 @@ def test_send_daily_schedule_with_events(mock_dt, mock_post):
     assert "14:00-15:00 プロジェクトレビュー" in text
     # 件数フッター
     assert "全3件" in text
+    # 同じ通知対象日の重複送信をLINE側で抑止する固定UUID
+    assert headers["X-Line-Retry-Key"] == "171fce3f-69f3-50aa-bb85-ec0de3226ea9"
 
 
 @patch.dict("os.environ", ENV_VARS, clear=False)
@@ -83,7 +86,7 @@ def test_send_daily_schedule_no_events(mock_dt, mock_post):
     mock_resp.ok = True
     mock_post.return_value = mock_resp
 
-    send_daily_schedule([])
+    send_daily_schedule([], date(2026, 3, 21))
 
     mock_post.assert_called_once()
     call_kwargs = mock_post.call_args
@@ -111,7 +114,27 @@ def test_send_daily_schedule_api_failure(mock_dt, mock_sleep, mock_post):
     mock_post.return_value = mock_resp
 
     with pytest.raises(Exception, match="Internal Server Error"):
-        send_daily_schedule([])
+        send_daily_schedule([], date(2026, 3, 21))
 
     # MAX_RETRIES (3) 回リトライしていること
     assert mock_post.call_count == 3
+    retry_keys = [call.kwargs["headers"]["X-Line-Retry-Key"] for call in mock_post.call_args_list]
+    assert len(set(retry_keys)) == 1
+
+
+@patch.dict("os.environ", ENV_VARS, clear=False)
+@patch("src.line_notify.requests.post")
+@patch("src.line_notify.datetime")
+def test_send_daily_schedule_duplicate_is_success(mock_dt, mock_post):
+    """同じRetry Keyが受理済みの409応答は成功として扱う."""
+    mock_dt.now.return_value = datetime(2026, 3, 20, 10, 0, tzinfo=JST)
+
+    mock_resp = MagicMock()
+    mock_resp.ok = False
+    mock_resp.status_code = 409
+    mock_post.return_value = mock_resp
+
+    send_daily_schedule([], date(2026, 3, 21))
+
+    mock_post.assert_called_once()
+    mock_resp.raise_for_status.assert_not_called()

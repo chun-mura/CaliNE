@@ -6,6 +6,9 @@ __pycache__/
 .env
 .env.*
 !.env.template
+cloudflare/node_modules/
+cloudflare/.wrangler/
+cloudflare/.dev.vars*
 
 # Credentials / Secrets
 client_secret*.json

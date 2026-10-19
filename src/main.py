@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import jpholiday
 from dotenv import load_dotenv
@@ -20,11 +20,26 @@ logger = logging.getLogger(__name__)
 JST = timezone(timedelta(hours=9))
 
 
+def resolve_target_date() -> date:
+    """Workflow入力の日付、未指定ならJSTの翌日を返す."""
+    value = os.environ.get("TARGET_DATE", "").strip()
+    if not value:
+        return (datetime.now(JST) + timedelta(days=1)).date()
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("TARGET_DATE must be YYYY-MM-DD") from exc
+
+
 async def main() -> None:
     """Outlook から翌日の予定を取得し、LINE 通知と Google カレンダー同期を行う."""
-    tomorrow = (datetime.now(JST) + timedelta(days=1)).date()
-    if jpholiday.is_holiday(tomorrow):
-        logger.info("明日 %s は祝日（%s）のためスキップします", tomorrow, jpholiday.is_holiday_name(tomorrow))
+    target_date = resolve_target_date()
+    if jpholiday.is_holiday(target_date):
+        logger.info(
+            "通知対象日 %s は祝日（%s）のためスキップします",
+            target_date,
+            jpholiday.is_holiday_name(target_date),
+        )
         return
 
     from src.outlook import get_next_day_events
@@ -34,7 +49,7 @@ async def main() -> None:
     # ---- 1. Outlook から予定を取得 ----
     logger.info("Outlook から翌日の予定を取得します")
     try:
-        events = await get_next_day_events()
+        events = await get_next_day_events(target_date)
         logger.info("予定を %d 件取得しました", len(events))
     except Exception as exc:
         logger.error("Outlook からの予定取得に失敗しました: %s: %s", type(exc).__name__, exc, exc_info=True)
@@ -49,7 +64,7 @@ async def main() -> None:
         from src.line_notify import send_daily_schedule
 
         logger.info("LINE 通知を送信します")
-        send_daily_schedule(events)
+        send_daily_schedule(events, target_date)
         logger.info("LINE 通知の送信に成功しました")
         line_ok = True
     except Exception as exc:

@@ -1,7 +1,8 @@
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+import uuid
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -13,12 +14,13 @@ JST = ZoneInfo("Asia/Tokyo")
 MAX_RETRIES = 3
 
 
-def _broadcast_message(text: str) -> None:
+def _broadcast_message(text: str, retry_key: str) -> None:
     token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
+        "X-Line-Retry-Key": retry_key,
     }
     body = {
         "messages": [{"type": "text", "text": text}],
@@ -27,6 +29,9 @@ def _broadcast_message(text: str) -> None:
     for attempt in range(MAX_RETRIES):
         resp = requests.post(LINE_API_URL, headers=headers, json=body, timeout=10)
         if resp.ok:
+            return
+        if resp.status_code == 409:
+            logger.info("LINE API request was already accepted for retry key %s", retry_key)
             return
         logger.warning(
             "LINE API error (attempt %d/%d): %d %s",
@@ -41,9 +46,9 @@ def _broadcast_message(text: str) -> None:
     resp.raise_for_status()
 
 
-def send_daily_schedule(events: list[dict]) -> None:
-    tomorrow = datetime.now(JST) + timedelta(days=1)
-    header = f"\U0001f4c5 明日の予定（{tomorrow.month}/{tomorrow.day}）"
+def send_daily_schedule(events: list[dict], target_date: date) -> None:
+    retry_key = str(uuid.uuid5(uuid.NAMESPACE_URL, f"caline:{target_date.isoformat()}"))
+    header = f"\U0001f4c5 明日の予定（{target_date.month}/{target_date.day}）"
 
     if not events:
         text = f"{header}\n\n予定はありません"
@@ -58,4 +63,4 @@ def send_daily_schedule(events: list[dict]) -> None:
         body = "\n".join(lines)
         text = f"{header}\n\n{body}\n\n全{len(events)}件"
 
-    _broadcast_message(text)
+    _broadcast_message(text, retry_key)

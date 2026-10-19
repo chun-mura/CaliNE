@@ -1,9 +1,12 @@
 name: Daily Calendar Sync
 
 on:
-  schedule:
-    - cron: "0 11 * * 0-4" # UTC 11:00 = JST 20:00（日〜木 = 翌日が平日）
   workflow_dispatch:
+    inputs:
+      target_date:
+        description: "通知対象日 (JST, YYYY-MM-DD)。未指定時は翌日"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -27,6 +30,7 @@ jobs:
       - name: Run sync
         env:
           ENABLE_GOOGLE_CALENDAR: "false"
+          TARGET_DATE: ${{ inputs.target_date }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_USER_ID: ${{ secrets.AZURE_USER_ID }}
