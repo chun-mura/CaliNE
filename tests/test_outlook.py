@@ -6,8 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from kiota_abstractions.api_error import APIError
+from msgraph.generated.models.free_busy_status import FreeBusyStatus
+from msgraph.generated.models.response_type import ResponseType
 
-from src.outlook import JST, _build_credential, get_next_day_events
+from src.outlook import JST, _build_credential, _fetch_events, get_next_day_events
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -21,7 +23,12 @@ ENV_VARS = {
 }
 
 
-def _make_event(subject: str, start_hour: int, end_hour: int):
+def _make_event(
+    subject: str,
+    start_hour: int,
+    end_hour: int,
+    response: ResponseType,
+):
     """Graph API の event オブジェクトを模倣する SimpleNamespace を返す."""
     start_dt = datetime(2026, 3, 20, start_hour, 0, 0, tzinfo=JST)
     end_dt = datetime(2026, 3, 20, end_hour, 0, 0, tzinfo=JST)
@@ -30,12 +37,41 @@ def _make_event(subject: str, start_hour: int, end_hour: int):
         subject=subject,
         start=SimpleNamespace(date_time=start_dt.strftime("%Y-%m-%dT%H:%M:%S.0000000")),
         end=SimpleNamespace(date_time=end_dt.strftime("%Y-%m-%dT%H:%M:%S.0000000")),
+        is_cancelled=False,
+        response_status=SimpleNamespace(response=response),
+        show_as=FreeBusyStatus.Busy,
     )
 
 
 # ---------------------------------------------------------------------------
 # テストケース
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_events_includes_only_accepted_or_organized_events():
+    """承諾済みまたは自分が主催する予定だけを返す."""
+    client = MagicMock()
+    client.users.by_user_id.return_value.calendar_view.get = AsyncMock(
+        return_value=SimpleNamespace(
+            value=[
+                _make_event("承諾済み", 9, 10, ResponseType.Accepted),
+                _make_event("自分が主催", 10, 11, ResponseType.Organizer),
+                _make_event("仮承諾", 11, 12, ResponseType.TentativelyAccepted),
+                _make_event("未回答", 12, 13, ResponseType.NotResponded),
+                _make_event("辞退", 13, 14, ResponseType.Declined),
+            ]
+        )
+    )
+
+    events = await _fetch_events(
+        client,
+        "fake-user@example.com",
+        "2026-03-20T00:00:00",
+        "2026-03-20T23:59:59",
+    )
+
+    assert [event["subject"] for event in events] == ["承諾済み", "自分が主催"]
 
 
 @pytest.mark.asyncio

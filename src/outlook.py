@@ -104,7 +104,10 @@ async def _fetch_events(client: GraphServiceClient, user_id: str, start: str, en
         for event in result.value:
             if event.is_cancelled:
                 continue
-            if event.response_status and event.response_status.response == ResponseType.Declined:
+            if not event.response_status or event.response_status.response not in {
+                ResponseType.Accepted,
+                ResponseType.Organizer,
+            }:
                 continue
             if event.show_as == FreeBusyStatus.Free:
                 continue
